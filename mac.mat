@@ -1,0 +1,108 @@
+% MATLAB Script for Multiplier and Accumulator Function with Complex Numbers
+
+% Read the binary numbers from the real and imaginary files line by line
+realFilename = 'real_input.txt'; % Replace with your real part file name
+imagFilename = 'imag_input.txt'; % Replace with your imaginary part file name
+
+% Open the real part file
+realFileID = fopen(realFilename, 'r');
+if realFileID == -1
+    error('Real part file could not be opened.');
+end
+
+% Open the imaginary part file
+imagFileID = fopen(imagFilename, 'r');
+if imagFileID == -1
+    error('Imaginary part file could not be opened.');
+end
+
+% Initialize arrays to store the fixed-point numbers
+realNumbers = zeros(1, 64); % Preallocate for 64 real numbers
+imagNumbers = zeros(1, 64); % Preallocate for 64 imaginary numbers
+index = 1;
+
+% Read the real part file line by line
+while ~feof(realFileID)
+    realBinaryStr = fgetl(realFileID); % Read one line as a string
+    if isempty(realBinaryStr) || length(realBinaryStr) ~= 16
+        error('Invalid binary number in real part file.');
+    end
+    
+    % Interpret as signed fixed-point number (1 sign bit, 4 integer bits, 11 fractional bits)
+    signBit = str2double(realBinaryStr(1)); % Extract sign bit
+    integerBits = realBinaryStr(2:5); % Extract 4 integer bits
+    fractionalBits = realBinaryStr(6:16); % Extract 11 fractional bits
+    
+    % Convert integer and fractional parts to decimal
+    integerValue = bin2dec(integerBits);
+    fractionalValue = bin2dec(fractionalBits) / (2^11); % Divide by 2^11 for fractional part
+    
+    % Combine integer and fractional parts
+    fixedPointValue = integerValue + fractionalValue;
+    
+    % Apply sign bit
+    if signBit == 1
+        fixedPointValue = -fixedPointValue;
+    end
+    
+    % Store the fixed-point number
+    realNumbers(index) = fixedPointValue;
+    index = index + 1;
+end
+
+fclose(realFileID);
+
+% Reset index for imaginary part
+index = 1;
+
+% Read the imaginary part file line by line
+while ~feof(imagFileID)
+    imagBinaryStr = fgetl(imagFileID); % Read one line as a string
+    if isempty(imagBinaryStr) || length(imagBinaryStr) ~= 16
+        error('Invalid binary number in imaginary part file.');
+    end
+    
+    % Interpret as signed fixed-point number (1 sign bit, 4 integer bits, 11 fractional bits)
+    signBit = str2double(imagBinaryStr(1)); % Extract sign bit
+    integerBits = imagBinaryStr(2:5); % Extract 4 integer bits
+    fractionalBits = imagBinaryStr(6:16); % Extract 11 fractional bits
+    
+    % Convert integer and fractional parts to decimal
+    integerValue = bin2dec(integerBits);
+    fractionalValue = bin2dec(fractionalBits) / (2^11); % Divide by 2^11 for fractional part
+    
+    % Combine integer and fractional parts
+    fixedPointValue = integerValue + fractionalValue;
+    
+    % Apply sign bit
+    if signBit == 1
+        fixedPointValue = -fixedPointValue;
+    end
+    
+    % Store the fixed-point number
+    imagNumbers(index) = fixedPointValue;
+    index = index + 1;
+end
+
+fclose(imagFileID);
+
+% Check if exactly 64 numbers were read from both files
+if index ~= 65
+    error('Input files must contain exactly 64 binary numbers each.');
+end
+
+% Combine real and imaginary parts into complex numbers
+complexNumbers = realNumbers + 1i * imagNumbers;
+
+% Perform multiplication and accumulation
+sumResult = 0;
+for i = 1:60 % Loop until i+4 is within bounds
+    product = complexNumbers(i) * complexNumbers(i+4); % Multiply i-th and (i+4)-th complex numbers
+    sumResult = sumResult + product; % Accumulate the result
+end
+
+% Divide the final sum by 64
+finalResult = sumResult / 64;
+
+% Display the result
+fprintf('Final Result: %f + %fi\n', real(finalResult), imag(finalResult));
